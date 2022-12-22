@@ -11,7 +11,7 @@ public class MoveCamera : MonoBehaviour
     private float x = 0f;
     private float y = 0f;
 
-    private bool fullscreen = false;
+    public static bool fullscreen = false;
 
     private void Update()
     {

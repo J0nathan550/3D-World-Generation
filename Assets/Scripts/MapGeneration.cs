@@ -1,36 +1,133 @@
 using UnityEngine;
 using UnityEditor;
 using TMPro;
+using System.Collections.Generic;
 
 public class MapGeneration : MonoBehaviour
 {
-    private int sizeX = 256, sizeY = 256;
-    public float minZ, maxZ;
-
-    [SerializeField] MeshRenderer mR;
-    [SerializeField] MeshFilter mF;
+    public UISystem ui;
+    public float minZ, maxZ; // height
+    public float freqX = 1f;
+    public float freqY = 1f;
     public int seed;
-
-    private Texture2D txt;
-    private float[,] values;
-
     public Color color0;
     public Color color1;
     public Color color2;
     public Color color3;
     public Color color4;
     public Color color5;
-
-    [SerializeField] private TextMeshProUGUI sizeMinZText, sizeMaxZText, seedText, mapNameText;
-
     public string mapName = "";
 
-    public void GenerateTexture()
-    {
-        Rnd rnd = new Rnd(seed);
+    public Vector3 scale = Vector3.one;
 
-        float offX = rnd.Get(), offY = rnd.Get();
-        float freqX = rnd.Get(1,5f), freqY = rnd.Get(1,5f);
+
+    [Range(2, 8)]
+    public int size = 4;
+    public List<Transform> maps = new();
+    [SerializeField] private GameObject originalMap;
+    [SerializeField] private Texture2D defaultMap;
+    [SerializeField] private Texture2D selectedMap;
+    private MeshRenderer selectedMesh = null;
+    private Material selectedMaterial = null;   
+    [SerializeField] private GameObject selectionObject;
+    [SerializeField] private Material wireFrameMat, terrainMat;
+    [SerializeField] private Material yellowMaterial;
+    [SerializeField] private Material blankMaterial;
+
+    private void Start()
+    {
+        GameObject map = Instantiate(originalMap, transform);
+        map.GetComponent<MeshRenderer>().material = blankMaterial;
+        map.transform.position = Vector3.zero;
+        maps.Add(map.transform);
+    }
+
+    private void Update()
+    {
+        if (MoveCamera.fullscreen)
+        {
+            return;
+        }
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit info))
+            {
+                if (info.collider.TryGetComponent(out MeshRenderer MR))
+                {
+                    if (info.collider.CompareTag("Selection"))
+                    {
+                        foreach (Transform t in maps)
+                        {
+                            if (t.position == info.collider.transform.position)
+                            {
+                                return;
+                            }
+                        }
+                        GameObject map = Instantiate(originalMap, transform);
+                        map.GetComponent<MeshRenderer>().material = blankMaterial;
+                        map.transform.position = info.collider.transform.position;
+                        maps.Add(map.transform);
+                        if (selectedMesh != null)
+                        {
+                            //selectedMesh.material.SetTexture("_Tex", defaultMap);
+                            selectedMesh.material = selectedMaterial;
+                        }
+                        selectedMesh = null;
+                        selectedMaterial = null;
+                        selectionObject.SetActive(false);
+                    }
+                    else
+                    {
+                        if (selectedMesh != null)
+                        {
+                            selectedMesh.material = selectedMaterial;
+                        }
+                        //MR.material.SetTexture("_Tex", selectedMap);
+                        selectedMaterial = MR.material;
+                        MR.material = yellowMaterial;
+                        selectedMesh = MR;
+                        selectionObject.SetActive(true);
+                        selectionObject.transform.position = MR.transform.position;
+                    }
+                }
+            }
+            else
+            {
+                if (selectedMesh != null)
+                {
+                    selectedMesh.material = selectedMaterial;
+                }
+                selectionObject.SetActive(false);
+                selectedMesh = null;    
+                selectedMaterial = null;
+            }
+        }
+    } 
+
+    private float[,] values;
+
+    private int sizeX = 256, sizeY = 256; // quality
+
+    public void WireFrameMode(bool isWireFrameMode)
+    {
+        foreach (Transform item in maps)
+        {
+            item.TryGetComponent(out MeshRenderer mr);
+            if (isWireFrameMode)
+            {
+                mr.material = wireFrameMat;
+            }
+            else
+            {
+                mr.material = terrainMat;
+            }
+        }
+    }
+
+    public Texture2D GenerateTexture(Transform map)
+    {
+        float offX = map.position.x + rndOffX;
+        float offY = map.position.z + rndOffY;
 
         if (minZ < 0)
         {
@@ -47,13 +144,13 @@ public class MapGeneration : MonoBehaviour
 
         values = new float[sizeX, sizeY];
 
-        txt = new Texture2D(sizeX, sizeY, TextureFormat.ARGB32, false, false);
+        Texture2D txt = new Texture2D(sizeX, sizeY, TextureFormat.ARGB32, false, false);
         for (int y = 0; y < sizeY; y++)
         {
             for (int x = 0; x < sizeX; x++)
             {
-                float pX = offX + (x * 1f / sizeX) * freqX;
-                float pY = offY + (y * 1f / sizeY) * freqY;
+                float pX = (offX + (x * 1f / sizeX)) * freqX;
+                float pY = (offY + (y * 1f / sizeY)) * freqY;
                 float h = Mathf.PerlinNoise(pX, pY);
                 h = minZ + h * (maxZ - minZ);
 
@@ -84,19 +181,7 @@ public class MapGeneration : MonoBehaviour
             }
         }
         txt.Apply();
-        if (!UISystem.isWireFrameMode)
-        {
-            mR.sharedMaterial.SetTexture("_Tex", txt);
-        }
-
-    }
-
-    private void Update()
-    {
-        sizeMinZText.text = $"Size Min Z: {minZ}";
-        sizeMaxZText.text = $"Size Max Z: {maxZ}";
-        seedText.text = $"Seed: {seed}";
-        mapNameText.text = $"Name: {mapName}";
+        return txt; 
     }
 
     public void ClearAll()
@@ -115,80 +200,111 @@ public class MapGeneration : MonoBehaviour
             }
         }
         txt.Apply();
-        mR.sharedMaterial.SetTexture("_Tex", txt);
-        Mesh mesh = new Mesh();
-        Vector3[] points = new Vector3[4];
-        points[0] = new Vector3(0, 0, 0);
-        points[1] = new Vector3(1, 0, 0);
-        points[2] = new Vector3(1, 0, 1);
-        points[3] = new Vector3(0, 0, 1);
-        mesh.vertices = points;
-        int[] triangles = new int[6];
-        triangles[0] = 0;   
-        triangles[1] = 3;   
-        triangles[2] = 2;   
-        triangles[3] = 0;   
-        triangles[4] = 2;   
-        triangles[5] = 1;
-        mesh.triangles = triangles;
-        Vector2[] UV = new Vector2[4];
-        UV[0] = new Vector2(0, 0);  
-        UV[1] = new Vector2(1, 0);
-        UV[2] = new Vector2(1, 1);
-        UV[3] = new Vector2(0, 1);
-        mesh.uv = UV;
-        mesh.RecalculateNormals();
-        mF.mesh = mesh;
+
+        foreach (Transform item in maps)
+        {
+            Destroy(item.gameObject);
+        }
+        GameObject map = Instantiate(originalMap, transform);
+        map.GetComponent<MeshRenderer>().material = blankMaterial;
+        map.transform.position = Vector3.zero;
+        maps.Clear();
+        maps.Add(map.transform);
     }
+
+    private float rndOffX, rndOffY;
 
     public void GenerateMesh()
     {
-        GenerateTexture();
-        Mesh mesh = new Mesh();
-        mesh.name = "Procedural Grid";
-
-        var vertices = new Vector3[(sizeX * sizeY)];
-        for (int i = 0, y = 0; y < sizeY; y++)
+        Rnd rnd = new Rnd(seed); // Never using
+        rndOffX = rnd.Get(-10f, 10f);
+        rndOffY = rnd.Get(-10f, 10f);
+        foreach (Transform map in maps)
         {
-            for (int x = 0; x < sizeX; x++, i++)
+            Texture2D txt = GenerateTexture(map);
+
+            transform.localScale = Vector3.one;
+
+            Mesh mesh = new Mesh();
+            var vertices = new Vector3[(sizeX * sizeY)];
+            for (int i = 0, y = 0; y < sizeY; y++)
             {
-                vertices[i] = new Vector3(x * 1f / sizeX, values[x,y], y * 1f / sizeY);
+                for (int x = 0; x < sizeX; x++, i++)
+                {
+                    vertices[i] = new Vector3(x * 1f / sizeX - .5f, values[x, y], y * 1f / sizeY - .5f); // hello?
+                }
+            }
+            mesh.vertices = vertices;
+
+            int[] triangles = new int[sizeX * sizeY * 6];
+            int index = 0;
+            for (int y = 0; y < sizeY - 1; y++)
+            {
+                for (int x = 0; x < sizeX - 1; x++)
+                {
+                    triangles[index + 0] = x + (sizeX) * y;
+                    triangles[index + 1] = x + 1 + (sizeX) * (y + 1);
+                    triangles[index + 2] = x + 1 + (sizeX) * y;
+                    triangles[index + 3] = x + (sizeX) * y;
+                    triangles[index + 4] = x + (sizeX) * (y + 1);
+                    triangles[index + 5] = x + 1 + (sizeX) * (y + 1);
+                    index += 6;
+                }
+            }
+
+            mesh.triangles = triangles;
+
+            Vector2[] UV = new Vector2[sizeX * sizeY];
+
+            for (int y = 0; y < sizeY; y++)
+            {
+                for (int x = 0; x < sizeX; x++)
+                {
+                    UV[x + sizeX * y] = new Vector2(x * 1f / sizeX, y * 1f / sizeY);
+                }
+            }
+
+            mesh.uv = UV;
+
+            mesh.RecalculateNormals();
+
+            map.TryGetComponent(out MeshRenderer mR);
+            map.TryGetComponent(out MeshFilter mF);
+
+            mF.mesh = mesh;
+            mesh.name = "Procedural Grid";
+
+            if (UISystem.isWireFrameMode)
+            {
+                mR.material = wireFrameMat;
+            }
+            else
+            {
+                mR.material = terrainMat;
+                Material material = mR.material;
+                mR.material = material;
+                mR.material.SetTexture("_Tex", txt);
             }
         }
-        mesh.vertices = vertices;
+        transform.localScale = scale;
+        ui.UpdateUI();
+        ui.Saving();
+    }
 
-        int[] triangles = new int[sizeX * sizeY * 6];
-        int index = 0;
-        for (int y = 0; y < sizeY - 1; y++)
+    public void UpdateMaps(List<MapPosition> positionList)
+    {
+        foreach (Transform item in maps)
         {
-            for (int x = 0; x < sizeX - 1; x++)
-            {
-                triangles[index + 0] = x + (sizeX) * y;
-                triangles[index + 1] = x + 1 + (sizeX) * (y + 1);
-                triangles[index + 2] = x + 1 + (sizeX) * y;
-                triangles[index + 3] = x + (sizeX) * y;
-                triangles[index + 4] = x + (sizeX) * (y + 1);
-                triangles[index + 5] = x + 1 + (sizeX) * (y + 1);
-                index += 6;
-            }
+            Destroy(item.gameObject);
         }
-
-        mesh.triangles = triangles;
-
-        Vector2[] UV = new Vector2[sizeX * sizeY];
-
-        for (int y = 0; y < sizeY; y++)
+        maps.Clear();
+        foreach (var mapPos in positionList)
         {
-            for (int x = 0; x < sizeX; x++)
-            {
-                UV[x + sizeX * y] = new Vector2(x * 1f / sizeX, y * 1f / sizeY);
-            }
+            GameObject map = Instantiate(originalMap, transform);
+            map.GetComponent<MeshRenderer>().material = blankMaterial;
+            map.transform.position = mapPos.v3(); 
+            maps.Add(map.transform);
         }
-
-        mesh.uv = UV;
-
-        mesh.RecalculateNormals();
-        mF.mesh = mesh;
     }
 }
 #if UNITY_EDITOR
@@ -201,11 +317,6 @@ public class MapGenerationEditor : Editor
         DrawDefaultInspector();
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Generate Texture"))
-        {
-            var tgt = (MapGeneration)target;
-            tgt.GenerateTexture();
-        }
         if (GUILayout.Button("Clear all"))
         {
             var tgt = (MapGeneration)target;

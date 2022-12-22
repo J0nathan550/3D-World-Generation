@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Ookii.Dialogs;
 using System.IO;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 public class UISystem : MonoBehaviour
 {
@@ -21,16 +22,18 @@ public class UISystem : MonoBehaviour
     public GameObject[] allUIElements;
     public MapGeneration generation;
     public MoveCamera moveCamera;
-    public GameObject map;
 
     [SerializeField] private TMP_InputField cameraSpeedText, mouseText;
-    [SerializeField] private TMP_InputField mapNameText,sizeXText, sizeYText, sizeZText, sizeMinZText, sizeMaxZText, seedText;
+    [SerializeField] private TMP_InputField mapNameText,sizeXText, sizeYText, sizeZText, seedText;
     [SerializeField] private TextMeshProUGUI sizeXTextUI, sizeYTextUI, sizeZTextUI;
+    [SerializeField] private TextMeshProUGUI mapNameLabel, seedLabel;
+    [SerializeField] private TextMeshProUGUI sizeHMin, sizeHMax, sizeHMinValue, sizeHMaxValue;
+    [SerializeField] private Slider sizeHMinSlider, sizeHMaxSlider;
+    [SerializeField] private Transform world;
 
     private int lastPanel;
     private int lastColorPanel;
 
-    [SerializeField] private MeshRenderer mr;
     [SerializeField] private Material terrain, wireframe;
 
     [SerializeField] private Toggle wireFrameToggle;
@@ -45,9 +48,10 @@ public class UISystem : MonoBehaviour
         cameraSpeedText.text = moveCamera.cameraSpeed.ToString();
         mouseText.text = moveCamera.mouseSensitivity.ToString();
     }
-
+    public static bool isOpenPanel = false;
     public void OpenClosePanel(int index) 
     {
+        isOpenPanel = !isOpenPanel;
         lastPanel = index;
         bool active = panels[index].activeSelf;
         panels[index].SetActive(!active);
@@ -60,8 +64,6 @@ public class UISystem : MonoBehaviour
             panels[i].SetActive(false);
         }
     }
-
-    
 
     public void ChangeSquareColor(int index)
     {
@@ -163,6 +165,16 @@ public class UISystem : MonoBehaviour
 
     public void Export()
     {
+        savingSystem.positionList.Clear();
+        foreach (Transform t in generation.transform)
+        {
+            savingSystem.positionList.Add(new()
+            {
+                x = t.position.x,
+                y = t.position.y,
+                z = t.position.z,
+            });
+        }
         string json = JsonConvert.SerializeObject(savingSystem, Formatting.Indented);
         VistaSaveFileDialog createFile = new VistaSaveFileDialog();
         if (createFile.ShowDialog() == System.Windows.Forms.DialogResult.OK)
@@ -182,6 +194,8 @@ public class UISystem : MonoBehaviour
                 savingSystem = JsonConvert.DeserializeObject<MapSavingSystem>(json);
             }
             LoadingSettings();
+            generation.UpdateMaps(savingSystem.positionList);
+            generation.GenerateMesh();
         }
         catch (System.Exception)
         {
@@ -195,18 +209,26 @@ public class UISystem : MonoBehaviour
         generation.mapName = savingSystem.mapName;
         generation.maxZ = savingSystem.maxH;
         generation.minZ = savingSystem.minH;
-        map.transform.localScale = (new Vector3(savingSystem.sizeX, savingSystem.sizeY, savingSystem.sizeZ));
+
+        world.transform.localScale = new Vector3(savingSystem.sizeX, savingSystem.sizeY, savingSystem.sizeZ);
 
         seedText.text = savingSystem.seed.ToString();
+        seedLabel.text = "Seed: {savingSystem.seed}";
         mapNameText.text = savingSystem.mapName.ToString();
+        mapNameLabel.text = $"Name: {savingSystem.mapName}";
         sizeXText.text = savingSystem.sizeX.ToString();
         sizeXTextUI.text = $"Size X: {savingSystem.sizeX}";
         sizeYText.text = savingSystem.sizeY.ToString();
         sizeYTextUI.text = $"Size Y: {savingSystem.sizeY}";
         sizeZText.text = savingSystem.sizeZ.ToString();
         sizeZTextUI.text = $"Size Z: {savingSystem.sizeZ}";
-        sizeMinZText.text = savingSystem.minH.ToString();
-        sizeMaxZText.text = savingSystem.maxH.ToString();
+
+        sizeHMin.text = $"Min Size H: {savingSystem.minH.ToString("F2")}";
+        sizeHMax.text = $"Max Size H: {savingSystem.maxH.ToString("F2")}";
+        sizeHMaxSlider.value = savingSystem.maxH;   
+        sizeHMinSlider.value = savingSystem.minH;
+        sizeHMaxValue.text = savingSystem.maxH.ToString("F2");
+        sizeHMinValue.text = savingSystem.maxH.ToString("F2");
 
         color0RGBText[0].text = savingSystem.colors[0].r.ToString();
         color0RGBText[1].text = savingSystem.colors[0].g.ToString();
@@ -275,9 +297,8 @@ public class UISystem : MonoBehaviour
             else if (i == 4) generation.color4 = colorParam;
             else if (i == 5) generation.color5 = colorParam;
         }
-        GenerateMap();
+        generation.GenerateMesh();
     }
-
     public void Exit()
     {
         Application.Quit();
@@ -309,16 +330,8 @@ public class UISystem : MonoBehaviour
     public void WireFrameMode()
     {
         isWireFrameMode = !isWireFrameMode;
-        if (isWireFrameMode)
-        {
-            mr.material = wireframe;
-        }
-        else
-        {
-            mr.material = terrain;
-        }
+        generation.WireFrameMode(isWireFrameMode);
     }
-
 
     public void SavePlayerSettings()
     {
@@ -328,22 +341,25 @@ public class UISystem : MonoBehaviour
         PlayerPrefs.SetFloat("mouseSensitivity", moveCamera.mouseSensitivity);
     }
 
-    public void GenerateMap()
+    public void UpdateUI()
     {
         generation.mapName = mapNameText.text;
-        map.transform.localScale = (new Vector3(float.Parse(sizeXText.text), float.Parse(sizeYText.text), float.Parse(sizeZText.text)));
-        generation.minZ = float.Parse(sizeMinZText.text);
-        generation.maxZ = float.Parse(sizeMaxZText.text);
+        world.transform.localScale = new Vector3(float.Parse(sizeXText.text), float.Parse(sizeYText.text), float.Parse(sizeZText.text));
+        generation.minZ = sizeHMinSlider.value;
+        generation.maxZ = sizeHMaxSlider.value;
         generation.seed = int.Parse(seedText.text);
-        generation.GenerateMesh();
-        mapNameText.text = generation.mapName;
-        sizeMinZText.text = generation.minZ.ToString();
-        sizeMaxZText.text = generation.maxZ.ToString();
-        sizeXTextUI.text = $"Size X:{sizeXText.text}";
-        sizeYTextUI.text = $"Size Y:{sizeYText.text}";
-        sizeZTextUI.text = $"Size Z:{sizeZText.text}";
-        seedText.text = generation.seed.ToString();
 
+        mapNameLabel.text = $"Name: {mapNameText.text}";
+        seedLabel.text = $"Seed: {generation.seed}";
+        sizeXTextUI.text = $"Size X: {sizeXText.text}";
+        sizeYTextUI.text = $"Size Y: {sizeYText.text}";
+        sizeZTextUI.text = $"Size Z: {sizeZText.text}";
+        sizeHMinSlider.value = generation.minZ;
+        sizeHMaxSlider.value = generation.maxZ;
+    }
+
+    public void Saving()
+    {
         savingSystem.mapName = mapNameText.text;
         savingSystem.sizeX = float.Parse(sizeXText.text);
         savingSystem.sizeY = float.Parse(sizeYText.text);
@@ -351,13 +367,27 @@ public class UISystem : MonoBehaviour
         savingSystem.seed = int.Parse(seedText.text);
         savingSystem.minH = generation.minZ;
         savingSystem.maxH = generation.maxZ;
+    }
 
+    public void ChangeSizeHSlider(int slider)
+    {
+        if (slider == 0)
+        {
+            sizeHMinValue.text = sizeHMinSlider.value.ToString("F2");
+            sizeHMin.text = $"Min Size H: {sizeHMinSlider.value.ToString("F2")}";
+        }
+        if (slider == 1)
+        {
+            sizeHMaxValue.text = sizeHMaxSlider.value.ToString("F2");
+            sizeHMax.text = $"Max Size H: {sizeHMaxSlider.value.ToString("F2")}";
+        }
     }
 
     public void RandomSeed()
     {
         seedText.text = Random.Range(0, int.MaxValue).ToString();
         savingSystem.seed = int.Parse(seedText.text);
+        seedLabel.text = $"Seed: {seedText.text}";
     }
 
 }
@@ -373,17 +403,25 @@ public class MapSavingSystem
     public float maxH { get; set; }
     public int seed { get; set; }
     public MapColorTest[] colors { get; set; }
+    public List<MapPosition> positionList { get; set; } 
+    
     public MapSavingSystem()
     {
         colors = new MapColorTest[6]
         {
-            new MapColorTest(0,0,0),
-            new MapColorTest(0,0,0),
-            new MapColorTest(0,0,0),
-            new MapColorTest(0,0,0),
-            new MapColorTest(0,0,0),
-            new MapColorTest(0,0,0),
+            new MapColorTest(255,255,255),
+            new MapColorTest(255,255,255),
+            new MapColorTest(255,255,255),
+            new MapColorTest(255,255,255),
+            new MapColorTest(255,255,255),
+            new MapColorTest(255,255,255),
         };
+        positionList = new List<MapPosition>();
+        seed = 0;
+        mapName = "Unknown";
+        sizeX = 1;
+        sizeY = 1;
+        sizeZ = 1;
     }
 }
 
@@ -401,4 +439,17 @@ public class MapColorTest
     public int r { get; set; }
     public int g { get; set; }
     public int b { get; set; }
+}
+
+[System.Serializable]
+public class MapPosition
+{
+    public float x { get; set; }
+    public float y { get; set; }
+    public float z { get; set; }
+
+    internal Vector3 v3()
+    {
+        return new Vector3(x, y, z);
+    }
 }
