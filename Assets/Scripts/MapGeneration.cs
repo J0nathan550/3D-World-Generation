@@ -25,6 +25,7 @@ public class MapGeneration : MonoBehaviour
     public int size = 4;
     public List<Transform> maps = new();
     [SerializeField] private GameObject originalMap;
+    public GameObject map;
     [SerializeField] private Texture2D defaultMap;
     [SerializeField] private Texture2D selectedMap;
     private MeshRenderer selectedMesh = null;
@@ -36,7 +37,7 @@ public class MapGeneration : MonoBehaviour
 
     private void Start()
     {
-        GameObject map = Instantiate(originalMap, transform);
+        map = Instantiate(originalMap, transform);
         map.GetComponent<MeshRenderer>().material = blankMaterial;
         map.transform.position = Vector3.zero;
         maps.Add(map.transform);
@@ -157,23 +158,23 @@ public class MapGeneration : MonoBehaviour
                 Color color;
                 if (h < .2f)
                 {
-                    color = Color.Lerp(color0, color1, h * 1.5f);
+                    color = Color.Lerp(color0, color1, h * 0.2f);
                 }
                 else if (h < .4f)
                 {
-                    color = Color.Lerp(color1, color2, (h - .2f) * 1.5f);
+                    color = Color.Lerp(color1, color2, (h - .2f) * 0.2f);
                 }
                 else if (h < .6f)
                 {
-                    color = Color.Lerp(color2, color3, (h - .4f) * 1.5f);
+                    color = Color.Lerp(color2, color3, (h - .4f) * 0.2f);
                 }
                 else if (h < .8f)
                 {
-                    color = Color.Lerp(color3, color4, (h - .6f) * 1.5f);
+                    color = Color.Lerp(color3, color4, (h - .6f) * 0.2f);
                 }
                 else
                 {
-                    color = Color.Lerp(color4, color5, (h - .8f) * 1.5f);
+                    color = Color.Lerp(color4, color5, (h - .8f) * 0.2f);
                 }
 
                 txt.SetPixel(x, y, color);
@@ -302,7 +303,7 @@ public class MapGeneration : MonoBehaviour
         {
             GameObject map = Instantiate(originalMap, transform);
             map.GetComponent<MeshRenderer>().material = blankMaterial;
-            map.transform.position = mapPos.v3(); 
+            map.transform.localPosition = mapPos.v3(); 
             maps.Add(map.transform);
         }
     }

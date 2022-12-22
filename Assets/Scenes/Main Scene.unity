@@ -7335,6 +7335,7 @@ MonoBehaviour:
   terrain: {fileID: 2100000, guid: 20f47ff2562716b409db45a2b26a9095, type: 2}
   wireframe: {fileID: 2100000, guid: 19251a1f0b5ae1c44ab3ed0091716445, type: 2}
   wireFrameToggle: {fileID: 802472016}
+  playerPos: {fileID: 330585546}
 --- !u!224 &607629176
 RectTransform:
   m_ObjectHideFlags: 0

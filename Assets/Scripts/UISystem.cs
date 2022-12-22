@@ -37,8 +37,9 @@ public class UISystem : MonoBehaviour
     [SerializeField] private Material terrain, wireframe;
 
     [SerializeField] private Toggle wireFrameToggle;
+    [SerializeField] private Transform playerPos;
 
-    MapSavingSystem savingSystem;
+    public MapSavingSystem savingSystem;
 
     private void Start()
     {
@@ -170,11 +171,20 @@ public class UISystem : MonoBehaviour
         {
             savingSystem.positionList.Add(new()
             {
-                x = t.position.x,
-                y = t.position.y,
-                z = t.position.z,
+                x = t.localPosition.x,
+                y = t.localPosition.y,
+                z = t.localPosition.z,
             });
         }
+        savingSystem.cameraPos = new()
+        {
+            x = playerPos.position.x,
+            y = playerPos.position.y,
+            z = playerPos.position.z,
+            rotX = playerPos.eulerAngles.x,
+            rotY = playerPos.eulerAngles.y,
+            rotZ = playerPos.eulerAngles.z,
+        };
         string json = JsonConvert.SerializeObject(savingSystem, Formatting.Indented);
         VistaSaveFileDialog createFile = new VistaSaveFileDialog();
         if (createFile.ShowDialog() == System.Windows.Forms.DialogResult.OK)
@@ -194,6 +204,8 @@ public class UISystem : MonoBehaviour
                 savingSystem = JsonConvert.DeserializeObject<MapSavingSystem>(json);
             }
             LoadingSettings();
+            Destroy(generation.map.gameObject);
+            generation.maps.Remove(generation.map.transform);
             generation.UpdateMaps(savingSystem.positionList);
             generation.GenerateMesh();
         }
@@ -209,6 +221,9 @@ public class UISystem : MonoBehaviour
         generation.mapName = savingSystem.mapName;
         generation.maxZ = savingSystem.maxH;
         generation.minZ = savingSystem.minH;
+
+        playerPos.position = new Vector3(savingSystem.cameraPos.x, savingSystem.cameraPos.y, savingSystem.cameraPos.z);
+        playerPos.eulerAngles = new Vector3(savingSystem.cameraPos.rotX, savingSystem.cameraPos.rotY, savingSystem.cameraPos.rotZ);
 
         world.transform.localScale = new Vector3(savingSystem.sizeX, savingSystem.sizeY, savingSystem.sizeZ);
 
@@ -356,6 +371,8 @@ public class UISystem : MonoBehaviour
         sizeZTextUI.text = $"Size Z: {sizeZText.text}";
         sizeHMinSlider.value = generation.minZ;
         sizeHMaxSlider.value = generation.maxZ;
+        sizeHMinValue.text = $"{sizeHMinSlider.value.ToString("F2")}";
+        sizeHMaxValue.text = $"{sizeHMinSlider.value.ToString("F2")}";
     }
 
     public void Saving()
@@ -403,8 +420,8 @@ public class MapSavingSystem
     public float maxH { get; set; }
     public int seed { get; set; }
     public MapColorTest[] colors { get; set; }
-    public List<MapPosition> positionList { get; set; } 
-    
+    public List<MapPosition> positionList { get; set; }
+    public CameraPosition cameraPos { get; set; }
     public MapSavingSystem()
     {
         colors = new MapColorTest[6]
@@ -422,6 +439,15 @@ public class MapSavingSystem
         sizeX = 1;
         sizeY = 1;
         sizeZ = 1;
+        cameraPos = new CameraPosition()
+        {
+            x = -0.7967257f,
+            y = 0.387666f,   
+            z = -0.8068401f,
+            rotX = 21.037f,
+            rotY = 46.325f,
+            rotZ = 0f
+        };
     }
 }
 
@@ -452,4 +478,14 @@ public class MapPosition
     {
         return new Vector3(x, y, z);
     }
+}
+[System.Serializable]
+public class CameraPosition
+{
+    public float x { get; set; }
+    public float y { get; set; }
+    public float z { get; set; }
+    public float rotX { get; set; }
+    public float rotY { get; set; }
+    public float rotZ { get; set; }
 }
