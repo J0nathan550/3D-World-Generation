@@ -49,7 +49,8 @@ public class UISystem : MonoBehaviour
         cameraSpeedText.text = moveCamera.cameraSpeed.ToString();
         mouseText.text = moveCamera.mouseSensitivity.ToString();
     }
-    public static bool isOpenPanel = false;
+    private bool isOpenPanel = false; // if we press on button this boolean became true. 
+    public bool arePanelsOpen= false; // if we press on button this boolean became true. 
     public void OpenClosePanel(int index) 
     {
         isOpenPanel = !isOpenPanel;
@@ -63,6 +64,11 @@ public class UISystem : MonoBehaviour
                 continue;
             }
             panels[i].SetActive(false);
+        }
+        arePanelsOpen = false;
+        for (int i = 0; i < panels.Length; i++)
+        {
+            arePanelsOpen = arePanelsOpen || panels[i].activeSelf;
         }
     }
 
@@ -204,8 +210,6 @@ public class UISystem : MonoBehaviour
                 savingSystem = JsonConvert.DeserializeObject<MapSavingSystem>(json);
             }
             LoadingSettings();
-            Destroy(generation.map.gameObject);
-            generation.maps.Remove(generation.map.transform);
             generation.UpdateMaps(savingSystem.positionList);
             generation.GenerateMesh();
         }
@@ -372,7 +376,7 @@ public class UISystem : MonoBehaviour
         sizeHMinSlider.value = generation.minZ;
         sizeHMaxSlider.value = generation.maxZ;
         sizeHMinValue.text = $"{sizeHMinSlider.value.ToString("F2")}";
-        sizeHMaxValue.text = $"{sizeHMinSlider.value.ToString("F2")}";
+        sizeHMaxValue.text = $"{sizeHMaxSlider.value.ToString("F2")}";
     }
 
     public void Saving()

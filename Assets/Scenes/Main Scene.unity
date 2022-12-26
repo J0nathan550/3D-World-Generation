@@ -3507,10 +3507,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1740720553}
+  m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &327930774
 MonoBehaviour:
@@ -3542,6 +3541,7 @@ MonoBehaviour:
   maps: []
   originalMap: {fileID: 926713403545640729, guid: c3978349cd08f46409ec6c43d22b6725,
     type: 3}
+  map: {fileID: 0}
   defaultMap: {fileID: 2800000, guid: 1d732e9fc921ba74baa14f10a3896944, type: 3}
   selectedMap: {fileID: 2800000, guid: 1a5a3e033deaa6247aab8c1d505414ea, type: 3}
   selectionObject: {fileID: 1740720552}
@@ -7336,6 +7336,7 @@ MonoBehaviour:
   wireframe: {fileID: 2100000, guid: 19251a1f0b5ae1c44ab3ed0091716445, type: 2}
   wireFrameToggle: {fileID: 802472016}
   playerPos: {fileID: 330585546}
+  arePanelsOpen: 0
 --- !u!224 &607629176
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21665,7 +21666,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1740720552}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -21674,8 +21675,8 @@ Transform:
   - {fileID: 210680570}
   - {fileID: 1832798047}
   - {fileID: 1178620864}
-  m_Father: {fileID: 327930773}
-  m_RootOrder: 0
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1744415300
 GameObject:

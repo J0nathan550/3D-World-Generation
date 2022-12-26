@@ -25,7 +25,7 @@ public class MapGeneration : MonoBehaviour
     public int size = 4;
     public List<Transform> maps = new();
     [SerializeField] private GameObject originalMap;
-    public GameObject map;
+    public GameObject map; 
     [SerializeField] private Texture2D defaultMap;
     [SerializeField] private Texture2D selectedMap;
     private MeshRenderer selectedMesh = null;
@@ -41,6 +41,10 @@ public class MapGeneration : MonoBehaviour
         map.GetComponent<MeshRenderer>().material = blankMaterial;
         map.transform.position = Vector3.zero;
         maps.Add(map.transform);
+
+        map.name = "first";
+        
+
     }
 
     private void Update()
@@ -49,7 +53,7 @@ public class MapGeneration : MonoBehaviour
         {
             return;
         }
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !ui.arePanelsOpen)
         {
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out RaycastHit info))
             {
@@ -68,6 +72,7 @@ public class MapGeneration : MonoBehaviour
                         map.GetComponent<MeshRenderer>().material = blankMaterial;
                         map.transform.position = info.collider.transform.position;
                         maps.Add(map.transform);
+                        map.name = $"MAP: {transform.childCount}";
                         if (selectedMesh != null)
                         {
                             //selectedMesh.material.SetTexture("_Tex", defaultMap);
@@ -303,7 +308,8 @@ public class MapGeneration : MonoBehaviour
         {
             GameObject map = Instantiate(originalMap, transform);
             map.GetComponent<MeshRenderer>().material = blankMaterial;
-            map.transform.localPosition = mapPos.v3(); 
+            map.transform.localPosition = mapPos.v3();
+            map.name = $"MAP: {transform.childCount}";
             maps.Add(map.transform);
         }
     }
